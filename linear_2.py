@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification
 
 
-np.random.seed(56)
+np.random.seed(30)
 
 
 def plotmodel(w1, w2, b , X,Y):
@@ -33,9 +33,42 @@ b = -0.2
 
 X, Y = make_classification(n_features=2, n_redundant=0,
                            n_informative=1, n_clusters_per_class=1)
+
+p = (0,2)
+
+def classify(ponto , w1 , w2 , b):
+    ret = w1 * ponto[0] + w2 * ponto[1] + b
+    
+    if ret >= 0: 
+        return 1, "yellow"
+    else:
+        return 0,"blue"
+def classify(ponto , w1 , w2 , b):
+    ret = w1 * ponto[0] + w2 * ponto[1] + b
+    
+    if ret >= 0: 
+        return 1, "yellow"
+    else:
+        return 0,"blue"
+
+
+
+p = (2,-2)
+classe , color = classify(p,w1,w2,b)
+
+print(classe,color)
 plotmodel(w1, w2, b, X, Y)
+
+plt.plot(p[0],p[1],marker = 'o', color = 'r')
 
 
 
 plt.show()
 
+acertos = 0
+for k in range(len(X)):
+    categ, _ = classify(X[k], w1,w2,b)
+    if categ == Y[k]:
+        acertos+=1
+        
+print("acuracy: {0} %".format((acertos/len(X))*100))
