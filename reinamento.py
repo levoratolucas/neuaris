@@ -1,57 +1,34 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
 import matplotlib.pyplot as plt
-from torch import nn
 from torchsummary import summary
 from sklearn.datasets import make_moons
-
-X1, Y1 = make_moons(n_samples=300, noise=0.2)
-
-plt.scatter(X1[:,0], X1[:, 1], marker='o', c=Y1, s=25, edgecolors='k')
-
-plt.show()
+from sklearn import datasets
 
 
 
-input_size = 2
-hidden_size = 8
-output_size = 1
-
-# net = nn.Sequential(
-#     nn.Linear(input_size,hidden_size),# escondida
-#     nn.ReLU(),#Ativação não linear
-#     nn.Linear(hidden_size,output_size)#output (saida)
-# )
-
-# pred = net(tensorX1)
-
-# print(summary(net,input_size=(1,input_size)))
+wine = datasets.load_wine()
+data = wine.data
+target = wine.target
+print(data.shape)   
+print(target.shape)
+print(wine.feature_names,wine.target_names)
 
 
-class  minhaNn(nn.Module):
-    def __init__(self,input_size,hidden_size,output_size):
-        super(minhaNn , self).__init__()
-        
-        # definir arquitetura
-        self.hidden = nn.Linear(input_size,hidden_size)
+class WineClassifier(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(WineClassifier, self).__init__()
+        self.hidden = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
-        self.output = nn.Linear(hidden_size,output_size)
+        self.output = nn.Linear(hidden_size, output_size)
+        self.softmax = nn.Softmax()
         
-    def forward(self,X):
-        
-        
-        # gerar saida
-        hidden = self.relu(self.hidden(X))
-        output = self.output(hidden)
+    def forward(self, X):
+        feature = self.relu(self.hidden(X))
+        output = self.softmax(self.output(feature))
         return output
     
-    
-net = minhaNn(input_size,hidden_size,output_size)
-
-
 if torch.cuda.is_available():
     device = torch.device("cuda")
     print("disponivel")
@@ -59,6 +36,8 @@ else:
     device = torch.device("cpu")
     print("neagtivo")
     
-net.to(device)
-tensorX1 = torch.from_numpy(X1).float()
-tensorX1 = tensorX1.to(device)
+input_size = data.shape[1]
+hidden_size = 32
+output_size = len(wine.target_names)
+        
+net = WineClassifier(input_size, hidden_size, output_size).to(device)
