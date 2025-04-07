@@ -1,40 +1,97 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 import matplotlib.pyplot as plt
-from torchsummary import summary
-from sklearn.datasets import make_moons
+from torch import optim
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
+import os
+from moviepy import ImageSequenceClip
+from io import BytesIO
+from PIL import Image
 
+# Escolhendo duas features para visualização
 features = [0, 9]
-
 wine = datasets.load_wine()
 data = wine.data[:, features]
-target = wine.target
 
 scaler = StandardScaler()
-data_scaled = scaler.fit_transform(data)
+data = scaler.fit_transform(data)
 
-fig, axes = plt.subplots(ncols=2, figsize=(12, 5))
+target = wine.target
 
-axes[0].scatter(data[:, 0], data[:, 1], c=target, cmap=plt.cm.brg)
-axes[0].set_title("Original")
-axes[0].set_xlabel(wine.feature_names[features[0]])
-axes[0].set_ylabel(wine.feature_names[features[1]])
+# Verificando uso da GPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Usando dispositivo:", device)
 
-axes[1].scatter(data_scaled[:, 0], data_scaled[:, 1], c=target, cmap=plt.cm.brg)
-axes[1].set_title("Normalizado")
-axes[1].set_xlabel(wine.feature_names[features[0]])
-axes[1].set_ylabel(wine.feature_names[features[1]])
+# Configurando rede neural
+input_size = data.shape[1]
+hidden_size = 32
+output_size = len(wine.target_names)
 
-plt.tight_layout()
-plt.show()
+net = nn.Sequential(
+    nn.Linear(input_size, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, output_size),
+    nn.Softmax(dim=-1)
+).to(device)
 
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-    print("GPU disponível")
-else:
-    device = torch.device("cpu")
-    print("GPU não disponível")
+# Função para desenhar os limites de decisão
+def gerar_frame(X, y, model):
+    x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
+    y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1
 
+    spacing = min(x_max - x_min, y_max - y_min) / 100
+
+    XX, YY = np.meshgrid(np.arange(x_min, x_max, spacing),
+                         np.arange(y_min, y_max, spacing))
+
+    data_plot = np.hstack((XX.ravel().reshape(-1, 1),
+                           YY.ravel().reshape(-1, 1)))
+
+    db_prob = model(torch.Tensor(data_plot).to(device))
+    clf = np.argmax(db_prob.cpu().data.numpy(), axis=-1)
+    Z = clf.reshape(XX.shape)
+
+    plt.figure()
+    plt.contourf(XX, YY, Z, cmap=plt.cm.brg, alpha=0.5)
+    plt.scatter(X[:, 0], X[:, 1], c=y, cmap=plt.cm.brg, edgecolors='k', s=25)
+
+    # Salvar o frame em memória
+    buf = BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close()
+    buf.seek(0)
+    return Image.open(buf)
+
+# Função de perda e otimizador
+criterion = nn.CrossEntropyLoss().to(device)
+optimizer = optim.SGD(net.parameters(), lr=1e-2)
+
+X = torch.Tensor(data).to(device)
+y = torch.LongTensor(target).to(device)
+
+def firstOptmizer(X, y):
+    optimizer.zero_grad()
+    pred = net(X)
+    loss = criterion(pred, y)
+    loss.backward()
+    optimizer.step()
+
+# Lista de frames
+frames = []
+
+# Loop de treinamento
+for i in range(1000):
+    firstOptmizer(X, y)
+
+    if i % 20 == 0:
+        frame = gerar_frame(data, target, net)
+        frames.append(frame)
+
+# Criar vídeo com MoviePy
+clip = ImageSequenceClip([np.array(f) for f in frames], fps=5)
+clip.write_videofile("treinamento.mp4", codec="libx264")
+
+print("✅ Vídeo salvo como treinamento.mp4")
