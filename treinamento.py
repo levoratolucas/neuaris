@@ -41,3 +41,19 @@ hidden_size = 32
 output_size = len(wine.target_names)
         
 net = WineClassifier(input_size, hidden_size, output_size).to(device)
+
+
+criterion = nn.CrossEntropyLoss().to(device)
+
+
+Xtns = torch.from_numpy(data).float()
+Ytns = torch.from_numpy(target)
+
+Xtns = Xtns.to(device)
+Ytns = Ytns.to(device)
+
+print(Xtns.dtype, Ytns.dtype)
+
+pred = net(Xtns)
+
+print(pred.shape)
