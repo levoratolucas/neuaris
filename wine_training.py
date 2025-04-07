@@ -67,7 +67,11 @@ def gerar_frame(X, y, model):
 
 # Função de perda e otimizador
 criterion = nn.CrossEntropyLoss().to(device)
-optimizer = optim.SGD(net.parameters(), lr=1e-2)
+# optimizer = optim.SGD(net.parameters(), lr=1e-3)
+# optimizer = optim.Adagrad(net.parameters(), lr=1e-3, weight_decay=5e-4)
+# optimizer = optim.Adadelta(net.parameters(), lr=1e-3, weight_decay=5e-4)
+# optimizer = optim.RMSprop(net.parameters(), lr=1e-3, weight_decay=5e-4 momentum=0.9)
+optimizer = optim.Adam(net.parameters(), lr=1e-3, weight_decay=5e-4)
 
 X = torch.Tensor(data).to(device)
 y = torch.LongTensor(target).to(device)
@@ -81,7 +85,7 @@ def firstOptmizer(X, y):
 
 # Treinamento e geração dos frames em memória
 frames = []
-for i in range(1000):
+for i in range(100):
     firstOptmizer(X, y)
     if i % 10 == 0:
         frame = gerar_frame(data, target, net)
@@ -90,3 +94,22 @@ for i in range(1000):
 # Criar GIF
 imageio.mimsave("treinamento.gif", frames, duration=0.2)
 print("✅ GIF criado: treinamento.gif")
+
+
+
+
+
+
+
+
+
+
+
+# época é um conjunto de treinos
+
+# dataset com 6000 amostras 1500 pra teste 4500 aprendizado
+
+# pode dividir em épocas de 500 fazendo 9 épocas de 500
+
+# então a cada 9 iterações ele completou uma epoca
+
